@@ -12,6 +12,6 @@ Usage
 -----  
 *   Install GitHub CLI: `sudo apt install gh`
 *   Authenticate: `gh auth login`
-*   Download: `wget https://github.com/upmcplanetracker/github-repo-hardening-scripts/blob/main/harden-github.sh`
+*   Download: `wget https://raw.githubusercontent.com/upmcplanetracker/github-repo-hardening-scripts/main/harden-github.sh && chmod +x harden-github.sh`
 *   Make executable: `chmod +x ./harden-github.sh`
 *   Run: `./harden-github.sh`
