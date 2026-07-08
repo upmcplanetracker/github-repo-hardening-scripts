@@ -1,14 +1,20 @@
 #!/bin/bash
 set -euo pipefail
 
+echo "Fetching repositories..."
 repos=$(gh repo list --limit 1000 --json nameWithOwner --jq '.[].nameWithOwner')
+
+success_count=0
+fail_count=0
 
 for repo in $repos; do
     echo "--- Hardening $repo ---"
     
-    default_branch=$(gh api "repos/$repo" --jq .default_branch)
+    default_branch=$(gh api "repos/$repo" --jq .default_branch 2>/dev/null || echo "")
+    
     if [ -z "$default_branch" ]; then
         echo "ERROR: Could not determine default branch for $repo, skipping."
+        ((fail_count++))
         continue
     fi
     echo "Default branch: $default_branch"
@@ -28,10 +34,16 @@ for repo in $repos; do
 }
 EOF
     then
-        echo "Protection applied successfully."
+        echo "✓ Protection applied successfully."
+        ((success_count++))
     else
-        echo "WARNING: Failed to apply protection to $repo"
+        echo "⚠ WARNING: Failed to apply protection to $repo"
+        ((fail_count++))
     fi
 done
 
-echo "Finished."
+echo "=========================================="
+echo "Finished Hardening."
+echo "Successfully protected: $success_count"
+echo "Failed/Skipped: $fail_count"
+echo "=========================================="
