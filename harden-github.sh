@@ -1,27 +1,25 @@
 #!/bin/bash
 set -euo pipefail
 
-echo "Fetching repositories..."
-repos=$(gh repo list --limit 1000 --json nameWithOwner --jq '.[].nameWithOwner')
+gh auth status >/dev/null 2>&1 || { echo "GitHub CLI not authenticated"; exit 1; }
 
 success_count=0
 fail_count=0
 
-for repo in $repos; do
+while IFS= read -r repo; do
+    [[ -n "$repo" ]] || continue
+    
     echo "--- Hardening $repo ---"
     
-    default_branch=$(gh api "repos/$repo" --jq .default_branch 2>/dev/null || echo "")
+    default_branch=$(gh api "repos/$repo" --jq .default_branch 2>/dev/null || true)
     
-    if [ -z "$default_branch" ]; then
+    if [[ -z "$default_branch" ]]; then
         echo "ERROR: Could not determine default branch for $repo, skipping."
-        ((fail_count++))
+        fail_count=$((fail_count + 1))
         continue
     fi
-    echo "Default branch: $default_branch"
 
-    # Using PUT to establish the baseline. GitHub requires these top-level keys.
     if gh api -X PUT "repos/$repo/branches/$default_branch/protection" \
-      --silent \
       --input - <<EOF
 {
   "required_status_checks": null,
@@ -35,12 +33,12 @@ for repo in $repos; do
 EOF
     then
         echo "✓ Protection applied successfully."
-        ((success_count++))
+        success_count=$((success_count + 1))
     else
         echo "⚠ WARNING: Failed to apply protection to $repo"
-        ((fail_count++))
+        fail_count=$((fail_count + 1))
     fi
-done
+done <<< "$(gh repo list --limit 1000 --json nameWithOwner --jq '.[].nameWithOwner')"
 
 echo "=========================================="
 echo "Finished Hardening."
